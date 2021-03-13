@@ -1,4 +1,6 @@
 import sys, pygame
+from pygame.locals import *
+
 pygame.init()
 
 FRAMERATE = 30
@@ -19,7 +21,7 @@ while running:
     for e in pygame.event.get():
         if e.type == pygame.QUIT:
             running = False
-        elif e.type == KEYDOWN and e.Key == K_ESCAPE:
+        elif e.type == KEYDOWN and e.key == K_ESCAPE:
             running = False
 
     ballrect = ballrect.move(speed)
