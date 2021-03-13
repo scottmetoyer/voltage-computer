@@ -1,4 +1,6 @@
 import sys, pygame
+from pygame.locals import *
+
 pygame.init()
 
 FRAMERATE = 30
