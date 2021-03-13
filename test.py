@@ -2,10 +2,15 @@ import sys, pygame
 from pygame.locals import *
 
 pygame.init()
-
 FRAMERATE = 30
 clock = pygame.time.Clock()
-size = width, height = 320, 240
+
+size = width, height = 800, 480
+
+
+
+
+
 speed = [2, 2]
 black = 0, 0, 0
 
