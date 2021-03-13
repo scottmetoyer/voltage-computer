@@ -72,15 +72,15 @@ while running:
   clock.tick(FRAMERATE)
 
   for e in pygame.event.get():
-      if e.type == pygame.QUIT:
-        running = False
-      elif e.type == KEYDOWN and e.key == K_ESCAPE:
-        running = False
-      elif e.type == MOUSEBUTTONDOWN:
-        setButton(e.pos)
-      elif e.type == FINGERUP:
-        print(e)
-        setButton((e.x, e.y))
+    if e.type == pygame.QUIT:
+      running = False
+    elif e.type == KEYDOWN and e.key == K_ESCAPE:
+      running = False
+    elif e.type == MOUSEBUTTONDOWN:
+      setButton(e.pos)
+    elif e.type == FINGERDOWN:
+      print(e)
+      setButton((e.x, e.y))
 
   screen.fill(black)
 
