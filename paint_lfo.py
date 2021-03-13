@@ -78,6 +78,9 @@ while running:
       running = False
     elif e.type == MOUSEBUTTONDOWN:
       setButton(e.pos)
+    elif e.type == FINGERDOWN:
+      print("hello")
+      #setButton((e.x, e.y))
 
   screen.fill(black)
 
