@@ -1,20 +1,17 @@
 import sys, pygame
 from pygame.locals import *
+import ft5406
 
 pygame.init()
-
+size = width, height = 800, 480
+screen = pygame.display.set_mode(size, pygame.FULLSCREEN)
 FRAMERATE = 30
 clock = pygame.time.Clock()
-size = width, height = 800, 480
 
 black = 0, 0, 0
 white = 255, 255, 255
 light_color = 170, 170, 170
 dark_color = 100, 100, 100
-
-screen = pygame.display.set_mode(size)
-width = screen.get_width()
-height = screen.get_height()
 
 smallfont = pygame.font.SysFont('Corbel', 35)
 textA = smallfont.render('A' , True , white)
@@ -26,6 +23,12 @@ buttonB = pygame.Rect(650, 430, 40, 40)
 buttonC = pygame.Rect(700, 430, 40, 40)
 buttonD = pygame.Rect(750, 430, 40, 40)
 selectedButton = buttonB
+
+# Touch variables
+ts = ft5406.Touchscreen()
+touchStart = (0,0)
+touchState = False
+touchPosition = (0,0)
 
 pygame.mouse.set_visible(False)
 running = True
@@ -76,11 +79,17 @@ while running:
       running = False
     elif e.type == KEYDOWN and e.key == K_ESCAPE:
       running = False
-    elif e.type == MOUSEBUTTONDOWN:
-      setButton(e.pos)
-    elif e.type == FINGERDOWN:
-      print("hello")
-      #setButton((e.x, e.y))
+    #elif e.type == MOUSEBUTTONDOWN:
+      #setButton(e.pos)
+
+  for touch in ts.poll():
+    touchPosition = (touch.x, touch.y)
+    if touchState != touch.valid:
+      if touch.valid:
+        setButton((touch.x, touch.y))
+        #touchStart = (touch.x, touch.y)
+
+      touchState = touch.valid
 
   screen.fill(black)
 
