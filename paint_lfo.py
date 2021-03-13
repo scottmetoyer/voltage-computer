@@ -69,23 +69,24 @@ def setButton(pos):
     selectedButton = buttonD
 
 while running:
-    clock.tick(FRAMERATE)
+  clock.tick(FRAMERATE)
 
-    for e in pygame.event.get():
-        if e.type == pygame.QUIT:
-          running = False
-        elif e.type == KEYDOWN and e.key == K_ESCAPE:
-          running = False
-        elif e.type == MOUSEBUTTONDOWN:
-          setButton(e.pos)
-        elif e.type == FINGERDOWN:
-          setButton((e.x, e.y))
+  for e in pygame.event.get():
+      if e.type == pygame.QUIT:
+        running = False
+      elif e.type == KEYDOWN and e.key == K_ESCAPE:
+        running = False
+      elif e.type == MOUSEBUTTONDOWN:
+        setButton(e.pos)
+      elif e.type == FINGERDOWN:
+        print(e)
+        # setButton((e.x, e.y))
 
-    screen.fill(black)
+  screen.fill(black)
 
-    # Draw the LFO select buttons
-    drawButtons()
+  # Draw the LFO select buttons
+  drawButtons()
 
-    pygame.display.flip()
+  pygame.display.flip()
 
 pygame.quit()
