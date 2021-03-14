@@ -1,6 +1,6 @@
 import sys, pygame
 from pygame.locals import *
-import ft5406
+from ft5406 import Touchscreen, TS_PRESS, TS_RELEASE, TS_MOVE
 
 pygame.init()
 size = width, height = 800, 480
@@ -22,18 +22,19 @@ buttonA = pygame.Rect(600, 430, 40, 40)
 buttonB = pygame.Rect(650, 430, 40, 40)
 buttonC = pygame.Rect(700, 430, 40, 40)
 buttonD = pygame.Rect(750, 430, 40, 40)
-selectedButton = buttonB
+lfoA = [100 for x in range(40)]
+lfoB = [100 for x in range(40)]
+lfoC = [100 for x in range(40)]
+lfoD = [100 for x in range(40)]
+selectedButton = buttonA
+selectedLFO = lfoA
 
-# Touch variables
-ts = ft5406.Touchscreen()
-touchStart = (0,0)
-touchState = False
-touchPosition = (0,0)
+def draw_lfo():
+  for index, value in enumerate(selectedLFO):
+    x = index * 20
+    pygame.draw.circle(screen, light_color, (x, value), 5)
 
-pygame.mouse.set_visible(False)
-running = True
-
-def drawButtons():
+def draw_buttons():
   if selectedButton == buttonA:
     pygame.draw.rect(screen, light_color, buttonA)
   else:
@@ -59,17 +60,49 @@ def drawButtons():
   screen.blit(textC, (712, 439))
   screen.blit(textD, (762, 439))
 
-def setButton(pos):
+def set_button(pos):
   global selectedButton
+  global selectedLFO
 
   if (buttonA.collidepoint(pos)):
     selectedButton = buttonA
+    selectedLFO = lfoA
   elif (buttonB.collidepoint(pos)):
     selectedButton = buttonB
+    selectedLFO = lfoB
   elif (buttonC.collidepoint(pos)):
     selectedButton = buttonC
+    selectedLFO = lfoC
   elif (buttonD.collidepoint(pos)):
     selectedButton = buttonD
+    selectedLFO = lfoD
+
+def set_lfo_point(pos):
+  global selectedLFO
+  (x,y) = pos
+  index = x // 20
+  selectedLFO[index] = y
+
+def touch_handler(event, touch):
+  if event == TS_PRESS:
+    if (touch.y > 428):
+      set_button((touch.x, touch.y))
+    else:
+      set_lfo_point((touch.x, touch.y))
+  if event == TS_RELEASE:
+      print("Got release", touch)
+  if event == TS_MOVE:
+    if (touch.y < 428):
+      set_lfo_point((touch.x, touch.y))
+
+ts = Touchscreen()
+ts.touches[0].on_press = touch_handler
+ts.touches[0].on_release = touch_handler
+ts.touches[0].on_move = touch_handler
+ts.run()
+
+pygame.mouse.set_visible(False)
+running = True
 
 while running:
   clock.tick(FRAMERATE)
@@ -79,23 +112,14 @@ while running:
       running = False
     elif e.type == KEYDOWN and e.key == K_ESCAPE:
       running = False
-    #elif e.type == MOUSEBUTTONDOWN:
-      #setButton(e.pos)
-
-  for touch in ts.poll():
-    touchPosition = (touch.x, touch.y)
-    if touchState != touch.valid:
-      if touch.valid:
-        setButton((touch.x, touch.y))
-        #touchStart = (touch.x, touch.y)
-
-      touchState = touch.valid
 
   screen.fill(black)
 
   # Draw the LFO select buttons
-  drawButtons()
-
+  draw_buttons()
+  draw_lfo()
   pygame.display.flip()
 
 pygame.quit()
+ts.stop()
+exit()
