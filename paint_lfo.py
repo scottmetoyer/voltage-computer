@@ -5,88 +5,138 @@ from ft5406 import Touchscreen, TS_PRESS, TS_RELEASE, TS_MOVE
 pygame.init()
 size = width, height = 800, 480
 screen = pygame.display.set_mode(size, pygame.FULLSCREEN)
-FRAMERATE = 30
+FRAMERATE = 200
+NUMBER_OF_POINTS = 20
 clock = pygame.time.Clock()
 
-black = 0, 0, 0
-white = 255, 255, 255
-light_color = 170, 170, 170
-dark_color = 100, 100, 100
+black = 0,0,0
+white = 255,255,255
+red = 255,0,0
+light_color = 170,170,170
+dark_color = 60,60,60
+selected_lfo = 0
+small_font = pygame.font.SysFont('Corbel', 35)
 
-smallfont = pygame.font.SysFont('Corbel', 35)
-textA = smallfont.render('A' , True , white)
-textB = smallfont.render('B' , True , white)
-textC = smallfont.render('C' , True , white)
-textD = smallfont.render('D' , True , white)
-buttonA = pygame.Rect(600, 430, 40, 40)
-buttonB = pygame.Rect(650, 430, 40, 40)
-buttonC = pygame.Rect(700, 430, 40, 40)
-buttonD = pygame.Rect(750, 430, 40, 40)
-lfoA = [100 for x in range(40)]
-lfoB = [100 for x in range(40)]
-lfoC = [100 for x in range(40)]
-lfoD = [100 for x in range(40)]
-selectedButton = buttonA
-selectedLFO = lfoA
+button_text = [
+    small_font.render('A' , True , white),
+    small_font.render('B' , True , white),
+    small_font.render('C' , True , white),
+    small_font.render('D' , True , white)
+]
 
-def draw_lfo():
-  for index, value in enumerate(selectedLFO):
-    x = index * 20
-    pygame.draw.circle(screen, light_color, (x, value), 5)
+select_buttons = [
+    pygame.Rect(600, 430, 40, 40),
+    pygame.Rect(650, 430, 40, 40),
+    pygame.Rect(700, 430, 40, 40),
+    pygame.Rect(750, 430, 40, 40)
+]
 
-def draw_buttons():
-  if selectedButton == buttonA:
-    pygame.draw.rect(screen, light_color, buttonA)
-  else:
-    pygame.draw.rect(screen, dark_color, buttonA)
+slider_container = pygame.Rect(100, 430, 400, 40)
+slider_handles = [
+  pygame.Rect(100, 430, 400, 40),
+  pygame.Rect(100, 430, 400, 40),
+  pygame.Rect(100, 430, 400, 40),
+  pygame.Rect(100, 430, 400, 40)
+]
 
-  if selectedButton == buttonB:
-    pygame.draw.rect(screen, light_color, buttonB)
-  else:
-    pygame.draw.rect(screen, dark_color, buttonB)
+playhead_positions = [0,0,0,0]
+cycles_per_second = [.5,.5,.5,.5]
 
-  if selectedButton == buttonC:
-    pygame.draw.rect(screen, light_color, buttonC)
-  else:
-    pygame.draw.rect(screen, dark_color, buttonC)
+lfos = [
+    [100 for x in range(NUMBER_OF_POINTS)],
+    [100 for x in range(NUMBER_OF_POINTS)],
+    [100 for x in range(NUMBER_OF_POINTS)],
+    [100 for x in range(NUMBER_OF_POINTS)]
+]
 
-  if selectedButton == buttonD:
-    pygame.draw.rect(screen, light_color, buttonD)
-  else:
-    pygame.draw.rect(screen, dark_color, buttonD)
+max_speed = 4
+min_speed = .1
 
-  screen.blit(textA, (612, 439))
-  screen.blit(textB, (662, 439))
-  screen.blit(textC, (712, 439))
-  screen.blit(textD, (762, 439))
+def translate(value, fromMin, fromMax, toMin, toMax):
+    fromSpan = fromMax - fromMin
+    toSpan = toMax - toMin
+    valueScaled = float(value - fromMin) / float(fromSpan)
+    return toMin + (valueScaled * toSpan)
+
+for index, handle in enumerate(slider_handles):
+  handle.w = translate(cycles_per_second[index], min_speed, max_speed, 0, 400)
+
+def update_playhead():
+  global playhead_positions
+
+  # Recalculate the step sizes and update the playheads as needed
+  for index, position in enumerate(playhead_positions):
+    step_size = (width / FRAMERATE) * cycles_per_second[index]
+    playhead_positions[index] += step_size
+
+    if (playhead_positions[index] >= width):
+      playhead_positions[index] = 0
+
+  pygame.draw.line(screen, red, (playhead_positions[selected_lfo], 0), (playhead_positions[selected_lfo], width), 1)
+  node = small_font.render(str(cycles_per_second[selected_lfo]), True , white)
+  screen.blit(node, (10, 440))
+
+  # Highlight the current LFO node
+  #current_node = int(playhead_positions[selected_lfo] // 20)
+  #x = current_node * 21
+  #y = lfos[selected_lfo][current_node]
+  #pygame.draw.circle(screen, red, (x + 2, y), 5)
+
+def draw_lfo(lfo, color):
+  last_point = lfo[0]
+
+  for index, value in enumerate(lfo):
+    gap = width // NUMBER_OF_POINTS
+    x = index * (gap + 2)
+    pygame.draw.circle(screen, color, (x + 2, value), 5)
+    pygame.draw.line(screen, color, (x-gap, last_point), (x, value), 2)
+    last_point = value
+
+def draw_lfos():
+  for lfo in lfos:
+    draw_lfo(lfo, dark_color)
+
+  draw_lfo(lfos[selected_lfo], light_color)
+
+def draw_controls():
+  pygame.draw.rect(screen, dark_color, slider_container)
+
+  for index, button in enumerate(select_buttons):
+    if (index == selected_lfo):
+      pygame.draw.rect(screen, light_color, button)
+      pygame.draw.rect(screen, light_color, slider_handles[selected_lfo])
+    else:
+      pygame.draw.rect(screen, dark_color, button)
+
+    screen.blit(button_text[index], (button.x + 12, 439))
 
 def set_button(pos):
-  global selectedButton
-  global selectedLFO
+  global selected_lfo
 
-  if (buttonA.collidepoint(pos)):
-    selectedButton = buttonA
-    selectedLFO = lfoA
-  elif (buttonB.collidepoint(pos)):
-    selectedButton = buttonB
-    selectedLFO = lfoB
-  elif (buttonC.collidepoint(pos)):
-    selectedButton = buttonC
-    selectedLFO = lfoC
-  elif (buttonD.collidepoint(pos)):
-    selectedButton = buttonD
-    selectedLFO = lfoD
+  for index, button in enumerate(select_buttons):
+    if (button.collidepoint(pos)):
+      selected_lfo = index
+
+def set_speed_slider(pos):
+  global cycles_per_second
+  global slider_handles
+
+  if (slider_container.collidepoint(pos)):
+    slider_handles[selected_lfo].w = pos[0] - 100
+    #cycles_per_second[selected_lfo] = new_value
 
 def set_lfo_point(pos):
-  global selectedLFO
+  global lfos
   (x,y) = pos
-  index = x // 20
-  selectedLFO[index] = y
+  gap = width // NUMBER_OF_POINTS
+  index = x // gap
+  lfos[selected_lfo][index] = y
 
 def touch_handler(event, touch):
   if event == TS_PRESS:
     if (touch.y > 428):
       set_button((touch.x, touch.y))
+      set_speed_slider((touch.x, touch.y))
     else:
       set_lfo_point((touch.x, touch.y))
   if event == TS_RELEASE:
@@ -94,6 +144,8 @@ def touch_handler(event, touch):
   if event == TS_MOVE:
     if (touch.y < 428):
       set_lfo_point((touch.x, touch.y))
+    else:
+      set_speed_slider((touch.x, touch.y))
 
 ts = Touchscreen()
 ts.touches[0].on_press = touch_handler
@@ -114,10 +166,9 @@ while running:
       running = False
 
   screen.fill(black)
-
-  # Draw the LFO select buttons
-  draw_buttons()
-  draw_lfo()
+  draw_controls()
+  draw_lfos()
+  update_playhead()
   pygame.display.flip()
 
 pygame.quit()
