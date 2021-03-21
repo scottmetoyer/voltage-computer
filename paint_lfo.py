@@ -1,6 +1,23 @@
-import sys, pygame
+import sys, pygame, math
 from pygame.locals import *
 from ft5406 import Touchscreen, TS_PRESS, TS_RELEASE, TS_MOVE
+import board
+import busio
+import adafruit_mcp4728
+
+# Initialize the MCP4728
+FULL_VREF_RAW_VALUE = 4095
+i2c = busio.I2C(board.SCL, board.SDA)
+mcp4728 = adafruit_mcp4728.MCP4728(i2c)
+mcp4728.channel_a.vref = adafruit_mcp4728.Vref.INTERNAL
+mcp4728.channel_b.vref = adafruit_mcp4728.Vref.INTERNAL
+mcp4728.channel_c.vref = adafruit_mcp4728.Vref.INTERNAL
+mcp4728.channel_d.vref = adafruit_mcp4728.Vref.INTERNAL
+mcp4728.channel_a.gain = 2
+mcp4728.channel_b.gain = 2
+mcp4728.channel_c.gain = 2
+mcp4728.channel_d.gain = 2
+mcp4728.save_settings()
 
 pygame.init()
 size = width, height = 800, 480
@@ -39,8 +56,10 @@ slider_handles = [
   pygame.Rect(100, 430, 400, 40)
 ]
 
+max_speed = 5
+min_speed = .01
 playhead_positions = [0,0,0,0]
-cycles_per_second = [.5,.5,.5,.5]
+cycles_per_second = [.25,.25,.25,.25]
 
 lfos = [
     [100 for x in range(NUMBER_OF_POINTS)],
@@ -49,17 +68,26 @@ lfos = [
     [100 for x in range(NUMBER_OF_POINTS)]
 ]
 
-max_speed = 4
-min_speed = .1
+def log_position(value, min_position, max_position, min_value, max_value):
+  min_v = math.log(min_value)
+  max_v = math.log(max_value)
+  scale = (max_v-min_v) / (max_position-min_position)
+  return (math.log(value)-min_v) / scale + min_position
+
+def log_value(value, min_position, max_position, min_value, max_value):
+  min_v = math.log(min_value)
+  max_v = math.log(max_value)
+  scale = (max_v-min_v) / (max_position-min_position)
+  return math.exp(min_v + scale * (value-min_position))
 
 def translate(value, fromMin, fromMax, toMin, toMax):
-    fromSpan = fromMax - fromMin
-    toSpan = toMax - toMin
-    valueScaled = float(value - fromMin) / float(fromSpan)
-    return toMin + (valueScaled * toSpan)
+  fromSpan = fromMax - fromMin
+  toSpan = toMax - toMin
+  valueScaled = float(value - fromMin) / float(fromSpan)
+  return toMin + (valueScaled * toSpan)
 
 for index, handle in enumerate(slider_handles):
-  handle.w = translate(cycles_per_second[index], min_speed, max_speed, 0, 400)
+  handle.w = log_position(cycles_per_second[index], 0, 400, min_speed, max_speed)
 
 def update_playhead():
   global playhead_positions
@@ -72,15 +100,9 @@ def update_playhead():
     if (playhead_positions[index] >= width):
       playhead_positions[index] = 0
 
-  pygame.draw.line(screen, red, (playhead_positions[selected_lfo], 0), (playhead_positions[selected_lfo], width), 1)
-  node = small_font.render(str(cycles_per_second[selected_lfo]), True , white)
-  screen.blit(node, (10, 440))
+    pygame.draw.line(screen, light_color, (playhead_positions[index], 0), (playhead_positions[index], width), 1)
 
-  # Highlight the current LFO node
-  #current_node = int(playhead_positions[selected_lfo] // 20)
-  #x = current_node * 21
-  #y = lfos[selected_lfo][current_node]
-  #pygame.draw.circle(screen, red, (x + 2, y), 5)
+  pygame.draw.line(screen, red, (playhead_positions[selected_lfo], 0), (playhead_positions[selected_lfo], width), 1)
 
 def draw_lfo(lfo, color):
   last_point = lfo[0]
@@ -123,7 +145,7 @@ def set_speed_slider(pos):
 
   if (slider_container.collidepoint(pos)):
     slider_handles[selected_lfo].w = pos[0] - 100
-    #cycles_per_second[selected_lfo] = new_value
+    cycles_per_second[selected_lfo] = log_value(slider_handles[selected_lfo].w, 0, 400, min_speed, max_speed)
 
 def set_lfo_point(pos):
   global lfos
@@ -147,6 +169,12 @@ def touch_handler(event, touch):
     else:
       set_speed_slider((touch.x, touch.y))
 
+def send_dac_voltage():
+  mcp4728.channel_a.raw_value = int(FULL_VREF_RAW_VALUE / 2)
+  mcp4728.channel_b.raw_value = int(FULL_VREF_RAW_VALUE / 2)
+  mcp4728.channel_c.raw_value = int(FULL_VREF_RAW_VALUE / 2)
+  mcp4728.channel_d.raw_value = int(FULL_VREF_RAW_VALUE / 2)
+
 ts = Touchscreen()
 ts.touches[0].on_press = touch_handler
 ts.touches[0].on_release = touch_handler
@@ -169,6 +197,7 @@ while running:
   draw_controls()
   draw_lfos()
   update_playhead()
+  send_dac_voltage()
   pygame.display.flip()
 
 pygame.quit()
